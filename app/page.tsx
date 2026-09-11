@@ -1,0 +1,222 @@
+"use client";
+
+import recipeImage from "./assets/recipe-spread.webp";
+import { useState } from "react";
+import { RecipeEditor, DeleteRecipe } from "@/components/recipe-editor";
+import { BackupDialog } from "@/components/backup";
+import {
+  ALL_GOALS,
+  GoalBadge,
+  GoalFilterBar,
+  type Goal,
+  type GoalFilter,
+} from "@/components/goal-filter";
+import { RecipeCalculator } from "@/components/recipe-calculator";
+import { GroceryList } from "@/components/grocery-list";
+import { FridgeFinder } from "@/components/fridge-finder";
+import { usePlanner } from "@/hooks/use-planner";
+import { Check, Refrigerator, ShoppingCart, Sparkles } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+export default function Home() {
+  const { state, recipes, error, update } = usePlanner();
+  const { selectedId, servings, mealPlan } = state;
+  const [status, setStatus] = useState("");
+  const [goals, setGoals] = useState<GoalFilter>(ALL_GOALS);
+  const setSelectedId = (id: string) =>
+    update((current) => ({
+      ...current,
+      selectedId: id,
+      servings: current.mealPlan[id] ?? 1,
+    }));
+  const setMealPlan = (
+    change: (current: Record<string, number>) => Record<string, number>,
+  ) =>
+    update((current) => ({ ...current, mealPlan: change(current.mealPlan) }));
+  // validateState keeps selectedId inside the catalog; fall back rather than
+  // crash if a future code path ever breaks that invariant.
+  const selected =
+    recipes.find((recipe) => recipe.id === selectedId) ?? recipes[0];
+  const goalCounts = recipes.reduce(
+    (totals, recipe) => ({ ...totals, [recipe.goal]: totals[recipe.goal] + 1 }),
+    { Cutting: 0, Bulking: 0, Either: 0 } as Record<Goal, number>,
+  );
+  const visible = recipes.filter((recipe) => goals[recipe.goal]);
+  // Changing the filter can hide whatever is selected. Move the selection to
+  // the first recipe still showing, rather than leaving a hidden recipe on
+  // screen as though the filter had not applied to it.
+  const applyGoals = (next: GoalFilter) => {
+    setGoals(next);
+    const stillShowing = recipes.filter((recipe) => next[recipe.goal]);
+    if (stillShowing.length && !stillShowing.some((r) => r.id === selected.id))
+      setSelectedId(stillShowing[0].id);
+  };
+
+  return (
+    <main>
+      <a className="skip-link" href="#recipe-picker">
+        Skip to recipe picker
+      </a>
+      <header className="topbar">
+        <div className="brand-mark">
+          <Refrigerator size={18} />
+        </div>
+        <div>
+          <strong>Fridge Friends</strong>
+          <span>Recipe overlap finder</span>
+        </div>
+        <div className="recipe-count">{recipes.length} recipes indexed</div>
+        <div className="topbar-actions">
+          <RecipeEditor onSaved={setStatus} />
+          <BackupDialog onStatus={setStatus} />
+        </div>
+      </header>
+      {error && (
+        <p className="storage-notice" role="alert">
+          {error}
+        </p>
+      )}
+      <p className="sr-only" role="status">
+        {status}
+      </p>
+      <section className="workspace">
+        <div className="intro">
+          <p className="eyebrow">
+            <Sparkles size={15} />
+            Waste less. Eat differently.
+          </p>
+          <h1>
+            Pick one recipe.
+            <br />
+            <em>Use up the rest.</em>
+          </h1>
+          <p>
+            Choose what you want to make first. We’ll surface the other recipes
+            that reuse its refrigerated ingredients.
+          </p>
+          {/* Local asset also used by the static native bundle; no image proxy. */}
+          <img
+            className="food-strip"
+            src={recipeImage}
+            alt="Protein shake, berry yogurt bowl, and chicken wrap"
+            width={1536}
+            height={1024}
+          />
+        </div>
+        <div className="picker-card">
+          <label htmlFor="recipe-picker">Start with a recipe</label>
+          <GoalFilterBar value={goals} counts={goalCounts} onChange={applyGoals} />
+          <Select value={selected.id} onValueChange={setSelectedId}>
+            <SelectTrigger
+              id="recipe-picker"
+              className="recipe-select"
+              aria-label="Choose a recipe"
+            >
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent
+              position="popper"
+              className="recipe-select-content max-w-[calc(100vw-2rem)]"
+            >
+              <SelectGroup>
+                <SelectLabel>Breakfast and lunch</SelectLabel>
+                {visible
+                  .filter((r) => r.type === "Breakfast / lunch")
+                  .map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+              </SelectGroup>
+              <SelectGroup>
+                <SelectLabel>Dinner</SelectLabel>
+                {visible
+                  .filter((r) => r.type === "Dinner")
+                  .map((r) => (
+                    <SelectItem key={r.id} value={r.id}>
+                      {r.name}
+                    </SelectItem>
+                  ))}
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+          {visible.length === 0 && (
+            <p className="empty-picker" role="status">
+              No recipes match those goals. Tick a goal above to see recipes
+              again.
+            </p>
+          )}
+          <div className="selected-recipe">
+            <div className="selected-top">
+              <span>
+                {selected.style}
+                <GoalBadge goal={selected.goal} />
+              </span>
+              <span>
+                {selected.source}
+                {selected.page ? ` · p. ${selected.page}` : ""}
+              </span>
+            </div>
+            <div className="recipe-title-row">
+              <h2>{selected.name}</h2>
+              <button
+                className={mealPlan[selectedId] ? "add-list added" : "add-list"}
+                onClick={() => {
+                  setMealPlan((current) => ({
+                    ...current,
+                    [selectedId]: servings,
+                  }));
+                  setStatus(
+                    `${selected.name} added to your grocery list: ${servings} recipe batches.`,
+                  );
+                }}
+              >
+                <ShoppingCart size={16} />
+                {mealPlan[selectedId]
+                  ? "Update grocery list"
+                  : "Add to grocery list"}
+              </button>
+            </div>
+            {selected.id.startsWith("custom-") && (
+              <div className="recipe-actions">
+                <RecipeEditor recipe={selected} onSaved={setStatus} />
+                <DeleteRecipe recipe={selected} onDeleted={setStatus} />
+              </div>
+            )}
+            <p className="mini-label">Quick perishables in this recipe</p>
+            <div className="chips">
+              {selected.perishables.map((i) => (
+                <span className="chip selected-chip" key={i}>
+                  <Check size={13} />
+                  {i}
+                </span>
+              ))}
+            </div>
+            <RecipeCalculator recipe={selected} />
+          </div>
+        </div>
+      </section>
+      <GroceryList onStatus={setStatus} />
+      <FridgeFinder
+        recipes={recipes}
+        selected={selected}
+        onSelect={setSelectedId}
+        onAdd={(recipe) => {
+          setMealPlan((current) => ({
+            ...current,
+            [recipe.id]: current[recipe.id] ?? 1,
+          }));
+          setStatus(`${recipe.name} added to your grocery list.`);
+        }}
+      />
+    </main>
+  );
+}

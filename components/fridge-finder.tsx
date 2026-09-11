@@ -1,0 +1,187 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { ArrowRight, BookOpen, Check, Plus, RotateCcw } from "lucide-react";
+import type { Recipe } from "@/lib/recipe-schema";
+import { GoalBadge } from "@/components/goal-filter";
+import { MacroSummary } from "@/components/macros";
+import { normalizeIngredient as normalize } from "@/lib/matching";
+
+export function FridgeFinder({
+  recipes,
+  selected,
+  onSelect,
+  onAdd,
+}: {
+  recipes: Recipe[];
+  selected: Recipe;
+  onSelect: (id: string) => void;
+  onAdd: (recipe: Recipe) => void;
+}) {
+  // Seed from the chosen recipe so the "use up the rest" flow still works, then
+  // let the list be edited freely.
+  const [chosen, setChosen] = useState<string[]>(() => selected.perishables);
+
+  // Every refrigerated ingredient in the catalog, commonest first so the
+  // ingredients most likely to be in a fridge are easiest to reach.
+  const pantry = useMemo(() => {
+    const counts = new Map<string, { label: string; uses: number }>();
+    for (const recipe of recipes)
+      for (const item of recipe.perishables) {
+        const key = normalize(item);
+        const seen = counts.get(key);
+        if (seen) seen.uses += 1;
+        else counts.set(key, { label: item, uses: 1 });
+      }
+    return [...counts.values()].sort(
+      (a, b) => b.uses - a.uses || a.label.localeCompare(b.label),
+    );
+  }, [recipes]);
+
+  const picked = useMemo(() => new Set(chosen.map(normalize)), [chosen]);
+
+  const results = useMemo(() => {
+    if (!picked.size) return [];
+    return recipes
+      .map((recipe) => {
+        const uses = recipe.perishables.filter((i) => picked.has(normalize(i)));
+        const missing = recipe.perishables.filter(
+          (i) => !picked.has(normalize(i)),
+        );
+        return { recipe, uses, missing };
+      })
+      .filter((match) => match.uses.length > 0)
+      .sort(
+        (a, b) =>
+          b.uses.length - a.uses.length ||
+          a.missing.length - b.missing.length ||
+          a.recipe.name.localeCompare(b.recipe.name),
+      )
+      .slice(0, 60);
+  }, [recipes, picked]);
+
+  const toggle = (label: string) =>
+    setChosen((current) =>
+      current.some((i) => normalize(i) === normalize(label))
+        ? current.filter((i) => normalize(i) !== normalize(label))
+        : [...current, label],
+    );
+
+  return (
+    <section className="results-section" id="fridge-finder">
+      <div className="results-heading">
+        <div>
+          <p className="eyebrow">From your fridge</p>
+          <h2>
+            {picked.size === 0
+              ? "What have you got?"
+              : `${results.length}${results.length === 60 ? "+" : ""} ${
+                  results.length === 1 ? "recipe uses" : "recipes use"
+                } what you have`}
+          </h2>
+          <p className="finder-intro">
+            Tick what is in your fridge. Recipes using the most of it come
+            first, so nothing goes to waste.
+          </p>
+        </div>
+        <div className="finder-actions">
+          <button className="clear-list" onClick={() => setChosen([])}>
+            <RotateCcw size={15} />
+            Clear
+          </button>
+        </div>
+      </div>
+
+      <div className="fridge-picker">
+        {pantry.map(({ label, uses }) => {
+          const on = picked.has(normalize(label));
+          return (
+            <label key={label} className="fridge-item" data-on={on}>
+              <input
+                type="checkbox"
+                checked={on}
+                onChange={() => toggle(label)}
+              />
+              <span className="fridge-tick" aria-hidden="true">
+                <Check size={12} strokeWidth={3} />
+              </span>
+              {label}
+              <span className="fridge-count">{uses}</span>
+            </label>
+          );
+        })}
+      </div>
+
+      {picked.size === 0 && (
+        <p className="empty-matches">
+          Choose an ingredient above to see what you can make with it.
+        </p>
+      )}
+
+      <div className="match-grid">
+        {results.map(({ recipe, uses, missing }, index) => (
+          <div className="match-card finder-card" key={recipe.id}>
+            <div className="rank">{String(index + 1).padStart(2, "0")}</div>
+            <div className="match-content">
+              <div className="match-meta">
+                <span>
+                  {recipe.style}
+                  <GoalBadge goal={recipe.goal} />
+                </span>
+                <span>{recipe.type}</span>
+              </div>
+              <h3>{recipe.name}</h3>
+              <MacroSummary macros={recipe.macros} />
+              <p className="mini-label">
+                Uses {uses.length} of your {picked.size}
+              </p>
+              <div className="chips">
+                {uses.map((item) => (
+                  <span className="chip shared-chip" key={item}>
+                    {item}
+                  </span>
+                ))}
+              </div>
+              {missing.length > 0 && (
+                <p className="missing">
+                  <span>Also needs:</span> {missing.join(", ")}
+                </p>
+              )}
+              <div className="source">
+                <BookOpen size={14} />
+                {recipe.source}
+                {recipe.page ? `, page ${recipe.page}` : ""}
+              </div>
+              <div className="finder-card-actions">
+                <button className="add-list" onClick={() => onAdd(recipe)}>
+                  <Plus size={15} />
+                  Add to grocery list
+                </button>
+                <button
+                  className="clear-list"
+                  onClick={() => {
+                    onSelect(recipe.id);
+                    document
+                      .getElementById("recipe-picker")
+                      ?.focus({ preventScroll: true });
+                    window.scrollTo({
+                      top: 0,
+                      behavior: window.matchMedia(
+                        "(prefers-reduced-motion: reduce)",
+                      ).matches
+                        ? "instant"
+                        : "smooth",
+                    });
+                  }}
+                >
+                  Open recipe
+                  <ArrowRight size={15} />
+                </button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}

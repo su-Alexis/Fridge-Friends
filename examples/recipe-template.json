@@ -1,0 +1,23 @@
+{
+  "id": "example-yogurt-bowl",
+  "name": "Example Yogurt Bowl",
+  "type": "Breakfast / lunch",
+  "goal": "Either",
+  "style": "Yogurt bowl",
+  "perishables": [
+    "0% Greek yogurt"
+  ],
+  "pantry": [
+    "Frozen strawberries"
+  ],
+  "source": "Personal recipe",
+  "page": null,
+  "ingredients": [
+    "1 cup 0% Greek yogurt",
+    "100g frozen strawberries"
+  ],
+  "instructions": [
+    "Thaw the strawberries to your preference.",
+    "Spoon the yogurt into a bowl and add the strawberries."
+  ]
+}

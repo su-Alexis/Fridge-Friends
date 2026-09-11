@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'none'; manifest-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'; worker-src 'self'"
+    />
+    <meta name="referrer" content="no-referrer" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#24342c" />
+    <meta
+      name="description"
+      content="Find recipes that share ingredients, scale recipe batches, and plan your grocery list."
+    />
+    <meta name="application-name" content="Fridge Friends" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Fridge Friends" />
+    <link rel="icon" href="%BASE_URL%favicon.svg" />
+    <link rel="apple-touch-icon" href="%BASE_URL%icons/apple-touch-icon.png" />
+    <link rel="manifest" href="%BASE_URL%manifest.webmanifest" />
+    <title>Fridge Friends · Recipe Matcher</title>
+  </head>
+  <body class="antialiased">
+    <div id="root"></div>
+    <noscript
+      >Fridge Friends needs JavaScript to calculate and save your grocery
+      list.</noscript
+    >
+    <script type="module" src="/main.tsx"></script>
+  </body>
+</html>
