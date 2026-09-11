@@ -20,7 +20,7 @@ const {
 const { initialState, validateState, parseSavedState } =
   await vite.ssrLoadModule("/lib/planner-state.ts");
 const { normalizeIngredient } = await vite.ssrLoadModule("/lib/matching.ts");
-const { matchesSearch } = await vite.ssrLoadModule("/lib/search.ts");
+const { matchesSearch, searchRank } = await vite.ssrLoadModule("/lib/search.ts");
 
 test("every catalog recipe has unique identity, ingredients and instructions", () => {
   assert.equal(new Set(recipes.map((r) => r.id)).size, recipes.length);
@@ -211,4 +211,36 @@ test("the catalog actually surfaces shakes when searching milk", () => {
     hits.every((r) => /shake|smoothie|milk/i.test(`${r.name} ${r.style}`)),
     "milk matched something unrelated",
   );
+});
+
+test("a literal match outranks a synonym one, and both still appear", () => {
+  // Typing the word beats matching only by synonym.
+  assert.ok(
+    searchRank("Strawberry Cheesecake Milkshake", "milk") >
+      searchRank("Vanilla Protein Shake", "milk"),
+    "a milkshake should outrank a plain shake when searching milk",
+  );
+  // But the synonym match is still a match, not a rejection.
+  assert.ok(searchRank("Vanilla Protein Shake", "milk") > 0);
+  assert.equal(searchRank("Chicken Burrito", "milk"), 0);
+
+  // Ranked over the real catalog, every literal "milk" title sorts above the
+  // shakes, so both kinds are visible in the first screenful.
+  const ranked = recipes
+    .map((r) => ({ r, rank: searchRank(`${r.name} ${r.style} ${r.goal}`, "milk") }))
+    .filter((e) => e.rank > 0)
+    .sort((a, b) => b.rank - a.rank);
+  const literal = ranked.filter((e) => /milk/i.test(e.r.name));
+  const synonym = ranked.filter((e) => !/milk/i.test(e.r.name));
+  assert.ok(literal.length > 0 && synonym.length > 0, "one of the groups is empty");
+  const lastLiteral = ranked.findIndex((e) => e === literal[literal.length - 1]);
+  const firstSynonym = ranked.findIndex((e) => e === synonym[0]);
+  assert.ok(
+    lastLiteral < firstSynonym,
+    "literal milk titles are not all ranked above the shakes",
+  );
+  // Both groups fit inside the 20 the picker shows.
+  const shown = ranked.slice(0, 20);
+  assert.ok(shown.some((e) => /milk/i.test(e.r.name)), "no milk titles shown");
+  assert.ok(shown.some((e) => !/milk/i.test(e.r.name)), "no shakes shown");
 });

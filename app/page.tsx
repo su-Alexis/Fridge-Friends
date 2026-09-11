@@ -16,7 +16,7 @@ import { RecipeCalculator } from "@/components/recipe-calculator";
 import { GroceryList } from "@/components/grocery-list";
 import { FridgeFinder } from "@/components/fridge-finder";
 import { usePlanner } from "@/hooks/use-planner";
-import { matchesSearch } from "@/lib/search";
+import { searchRank } from "@/lib/search";
 import {
   Check,
   Refrigerator,
@@ -66,11 +66,16 @@ export default function Home() {
   );
   // 309 recipes is too many to scroll, so the search narrows the list by name,
   // style and goal, with a few synonyms so "milk" finds the shakes.
-  const visible = recipes.filter(
-    (recipe) =>
-      goals[recipe.goal] &&
-      matchesSearch(`${recipe.name} ${recipe.style} ${recipe.goal}`, query),
-  );
+  const visible = recipes
+    .filter((recipe) => goals[recipe.goal])
+    .map((recipe) => ({
+      recipe,
+      rank: searchRank(`${recipe.name} ${recipe.style} ${recipe.goal}`, query),
+    }))
+    .filter((entry) => entry.rank > 0)
+    // Literal matches first, then synonym ones; catalog order within each.
+    .sort((a, b) => b.rank - a.rank)
+    .map((entry) => entry.recipe);
   // Changing the filter can hide whatever is selected. Move the selection to
   // the first recipe still showing, rather than leaving a hidden recipe on
   // screen as though the filter had not applied to it.
@@ -78,7 +83,7 @@ export default function Home() {
     setQuery(next);
   };
   void applyQuery;
-  const matches = visible.slice(0, 12);
+  const matches = visible.slice(0, 20);
   const showResults = openResults && query.trim() !== "" && matches.length > 0;
   const choose = (id: string) => {
     setSelectedId(id);
