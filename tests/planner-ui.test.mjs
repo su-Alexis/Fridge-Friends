@@ -504,3 +504,42 @@ test("typing in the search filters the picker on each keystroke", async () => {
   assert.equal(shown(), all, "clearing the search did not restore the list");
   await unmount();
 });
+
+test("search shows a results list you can pick from with the keyboard", async () => {
+  window.localStorage.clear();
+  await mount();
+  const input = document.querySelector(".recipe-search input");
+  const options = () => [...document.querySelectorAll('.search-results [role="option"]')];
+  assert.equal(options().length, 0, "results showed before typing");
+
+  await edit(input, "burr");
+  await act(async () => input.dispatchEvent(new Event("focus", { bubbles: true })));
+  assert.ok(options().length > 0, "no results list while typing");
+  assert.equal(
+    input.getAttribute("role"),
+    "combobox",
+    "search input is not exposed as a combobox",
+  );
+  assert.equal(input.getAttribute("aria-expanded"), "true");
+
+  // The first option is highlighted, and arrow keys move the highlight.
+  assert.equal(options()[0].getAttribute("aria-selected"), "true");
+  const firstName = options()[0].textContent;
+  const press = (key) =>
+    act(async () =>
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key, bubbles: true, cancelable: true }),
+      ),
+    );
+  await press("ArrowDown");
+  assert.equal(options()[1].getAttribute("aria-selected"), "true");
+  assert.notEqual(options()[1].textContent, firstName);
+
+  // Enter picks the highlighted recipe and clears the search.
+  const chosen = options()[1].querySelector(".search-result-name").textContent;
+  await press("Enter");
+  assert.match(document.querySelector(".selected-recipe h2").textContent, new RegExp(chosen.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")));
+  assert.equal(input.value, "", "search did not clear after choosing");
+  assert.equal(options().length, 0, "results stayed open after choosing");
+  await unmount();
+});

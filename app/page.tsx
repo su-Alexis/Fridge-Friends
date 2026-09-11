@@ -43,6 +43,8 @@ export default function Home() {
     setNotice(text ? { text, important } : null);
   const [goals, setGoals] = useState<GoalFilter>(ALL_GOALS);
   const [query, setQuery] = useState("");
+  const [active, setActive] = useState(0);
+  const [openResults, setOpenResults] = useState(false);
   const setSelectedId = (id: string) =>
     update((current) => ({
       ...current,
@@ -80,6 +82,13 @@ export default function Home() {
     setQuery(next);
   };
   void applyQuery;
+  const matches = visible.slice(0, 12);
+  const showResults = openResults && query.trim() !== "" && matches.length > 0;
+  const choose = (id: string) => {
+    setSelectedId(id);
+    setQuery("");
+    setOpenResults(false);
+  };
   const applyGoals = (next: GoalFilter) => {
     setGoals(next);
     const stillShowing = recipes.filter((recipe) => next[recipe.goal]);
@@ -144,21 +153,88 @@ export default function Home() {
             <input
               type="search"
               value={query}
-              onChange={(event) => setQuery(event.target.value)}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setActive(0);
+                setOpenResults(true);
+              }}
+              onFocus={() => query && setOpenResults(true)}
+              onBlur={() => setOpenResults(false)}
+              onKeyDown={(event) => {
+                if (!matches.length) return;
+                if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+                  event.preventDefault();
+                  setOpenResults(true);
+                  setActive((current) => {
+                    const step = event.key === "ArrowDown" ? 1 : -1;
+                    return (current + step + matches.length) % matches.length;
+                  });
+                } else if (event.key === "Enter" && openResults) {
+                  event.preventDefault();
+                  choose(matches[active].id);
+                } else if (event.key === "Escape") {
+                  event.preventDefault();
+                  // First Escape closes the list, a second clears the search.
+                  if (openResults) setOpenResults(false);
+                  else setQuery("");
+                }
+              }}
               placeholder="Search recipes — try chicken, burrito or pancakes"
               aria-label="Search recipes by name or style"
               aria-describedby="recipe-search-count"
               autoComplete="off"
+              role="combobox"
+              aria-expanded={showResults}
+              aria-controls="recipe-search-results"
+              aria-activedescendant={
+                showResults ? `search-option-${matches[active]?.id}` : undefined
+              }
             />
             {query && (
               <button
                 type="button"
                 className="recipe-search-clear"
                 aria-label="Clear search"
-                onClick={() => setQuery("")}
+                onClick={() => {
+                  setQuery("");
+                  setOpenResults(false);
+                }}
               >
                 <X size={15} />
               </button>
+            )}
+            {showResults && (
+              <ul
+                className="search-results"
+                id="recipe-search-results"
+                role="listbox"
+                aria-label="Matching recipes"
+              >
+                {matches.map((recipe, index) => (
+                  <li
+                    key={recipe.id}
+                    id={`search-option-${recipe.id}`}
+                    role="option"
+                    aria-selected={index === active}
+                    data-active={index === active}
+                    // mousedown, not click: blur would close the list first.
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      choose(recipe.id);
+                    }}
+                    onMouseEnter={() => setActive(index)}
+                  >
+                    <span className="search-result-name">{recipe.name}</span>
+                    <span className="search-result-style">{recipe.style}</span>
+                  </li>
+                ))}
+                {visible.length > matches.length && (
+                  <li className="search-results-more" aria-hidden="true">
+                    {visible.length - matches.length} more — keep typing to
+                    narrow
+                  </li>
+                )}
+              </ul>
             )}
           </div>
           <p id="recipe-search-count" className="search-count" role="status">
