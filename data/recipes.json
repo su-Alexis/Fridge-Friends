@@ -1804,8 +1804,8 @@
       ]
     },
     {
-      "id": "banana-peanut-oats-milkshake-cutting",
-      "name": "Banana Peanut & Oats Milkshake (Cutting)",
+      "id": "banana-peanut-oats-shake-cutting",
+      "name": "Banana Peanut & Oats Shake (Cutting)",
       "type": "Breakfast / lunch",
       "style": "Protein shake / smoothie",
       "goal": "Cutting",
@@ -1840,8 +1840,8 @@
       ]
     },
     {
-      "id": "banana-peanut-oats-milkshake-bulking",
-      "name": "Banana Peanut & Oats Milkshake (Bulking)",
+      "id": "banana-peanut-oats-shake-bulking",
+      "name": "Banana Peanut & Oats Shake (Bulking)",
       "type": "Breakfast / lunch",
       "style": "Protein shake / smoothie",
       "goal": "Bulking",

@@ -20,6 +20,7 @@ const {
 const { initialState, validateState, parseSavedState } =
   await vite.ssrLoadModule("/lib/planner-state.ts");
 const { normalizeIngredient } = await vite.ssrLoadModule("/lib/matching.ts");
+const { matchesSearch } = await vite.ssrLoadModule("/lib/search.ts");
 
 test("every catalog recipe has unique identity, ingredients and instructions", () => {
   assert.equal(new Set(recipes.map((r) => r.id)).size, recipes.length);
@@ -176,4 +177,38 @@ test("ingredient comparison sees through zero-width characters", () => {
       `U+${ch.charCodeAt(0).toString(16)} was not ignored`,
     );
   assert.equal(normalizeIngredient("  Greek Yogurt  "), "greek yogurt");
+});
+
+test("search treats milk as a request for shakes", () => {
+  // The catalog names most shakes "... Shake", so a plain substring search for
+  // "milk" would miss them.
+  assert.ok(matchesSearch("Banana Peanut & Oats Shake", "milk"));
+  assert.ok(matchesSearch("Vanilla Protein Shake", "milk"));
+  assert.ok(matchesSearch("Strawberry Cheesecake Milkshake", "milk"));
+  // Still matches the literal word wherever it appears.
+  assert.ok(matchesSearch("Almond milk oatmeal", "milk"));
+  // And does not drag in unrelated recipes.
+  assert.equal(matchesSearch("Chicken Burrito", "milk"), false);
+  assert.equal(matchesSearch("Beef Mazesoba", "milk"), false);
+
+  // Every word typed must still match something.
+  assert.ok(matchesSearch("Banana Protein Shake", "banana milk"));
+  assert.equal(matchesSearch("Vanilla Protein Shake", "banana milk"), false);
+  // An empty query matches everything.
+  assert.ok(matchesSearch("anything", "   "));
+});
+
+test("the catalog actually surfaces shakes when searching milk", () => {
+  const hits = recipes.filter((r) =>
+    matchesSearch(`${r.name} ${r.style} ${r.goal}`, "milk"),
+  );
+  assert.ok(hits.length > 20, `only ${hits.length} results for "milk"`);
+  assert.ok(
+    hits.some((r) => /Banana Peanut & Oats Shake/.test(r.name)),
+    "the renamed shake is not found by searching milk",
+  );
+  assert.ok(
+    hits.every((r) => /shake|smoothie|milk/i.test(`${r.name} ${r.style}`)),
+    "milk matched something unrelated",
+  );
 });

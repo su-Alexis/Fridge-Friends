@@ -16,6 +16,7 @@ import { RecipeCalculator } from "@/components/recipe-calculator";
 import { GroceryList } from "@/components/grocery-list";
 import { FridgeFinder } from "@/components/fridge-finder";
 import { usePlanner } from "@/hooks/use-planner";
+import { matchesSearch } from "@/lib/search";
 import {
   Check,
   Refrigerator,
@@ -63,17 +64,12 @@ export default function Home() {
     (totals, recipe) => ({ ...totals, [recipe.goal]: totals[recipe.goal] + 1 }),
     { Cutting: 0, Bulking: 0, Either: 0 } as Record<Goal, number>,
   );
-  // 309 recipes is too many to scroll, so the search narrows the dropdown by
-  // name, style and goal before it opens.
-  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  // 309 recipes is too many to scroll, so the search narrows the list by name,
+  // style and goal, with a few synonyms so "milk" finds the shakes.
   const visible = recipes.filter(
     (recipe) =>
       goals[recipe.goal] &&
-      terms.every((term) =>
-        `${recipe.name} ${recipe.style} ${recipe.goal}`
-          .toLowerCase()
-          .includes(term),
-      ),
+      matchesSearch(`${recipe.name} ${recipe.style} ${recipe.goal}`, query),
   );
   // Changing the filter can hide whatever is selected. Move the selection to
   // the first recipe still showing, rather than leaving a hidden recipe on
