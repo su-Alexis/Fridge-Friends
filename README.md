@@ -16,21 +16,6 @@ Open the Local URL Vite prints (usually `http://127.0.0.1:5173`). Keep Terminal 
 
 If you use nvm, `nvm install` and `nvm use` select the version in `.nvmrc`. Minimum supported Node version: 22.22.2.
 
-## Publish on GitHub Pages
-
-1. Put this project in a GitHub repository with a `main` branch. Include the hidden `.github` directory, `package-lock.json`, and the source files. Do not upload `node_modules` or `dist`; `.gitignore` excludes them.
-2. In the repository, open **Settings → Pages → Build and deployment → Source**, then select **GitHub Actions**.
-3. Push to `main`, or open **Actions → Check and deploy GitHub Pages → Run workflow** on `main`.
-4. The workflow checks dependencies, lint, types, recipes and interaction tests, builds the app, and publishes only `dist`. The deployment job reports the website URL. Turn on **Enforce HTTPS** in Pages settings when available.
-
-The workflow uses GitHub's short-lived token; no personal access token or repository secret is needed. Pull requests run checks without publishing. Protect `main` with required review/checks if other people can contribute. Dependabot proposes weekly package and action updates; updates are not automatically merged.
-
-Relative asset and manifest URLs support both `https://USERNAME.github.io/REPOSITORY/` and account/custom-domain sites without changing the repository name in the code. Keep the final slash in project URLs. The app has one screen and does not need a client-side routing fallback.
-
-This checkout has not been pushed or deployed to GitHub. The previous Sites deployment is separate and was not changed or deleted. GitHub Pages does not inherit its access policy. Treat built-in recipes and all shipped files as public website content.
-
-Official references: [GitHub Pages workflows](https://docs.github.com/en/pages/getting-started-with-github-pages/using-custom-workflows-with-github-pages) and [Vite static deployment](https://vite.dev/guide/static-deploy).
-
 ## Checks and production preview
 
 ```sh
