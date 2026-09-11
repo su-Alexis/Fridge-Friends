@@ -543,3 +543,43 @@ test("search shows a results list you can pick from with the keyboard", async ()
   assert.equal(options().length, 0, "results stayed open after choosing");
   await unmount();
 });
+
+test("the finder has its own goal options, shared with the picker", async () => {
+  window.localStorage.clear();
+  await mount();
+  const finderGoals = [...document.querySelectorAll(".finder-goals .goal-option")];
+  assert.equal(finderGoals.length, 3, "finder is missing the goal options");
+  assert.deepEqual(
+    finderGoals.map((el) => el.textContent.replace(/\d+$/, "").trim()),
+    ["Cutting", "Bulking", "Depends on portion size"],
+  );
+
+  assert.ok(
+    document.querySelectorAll("#fridge-finder .match-card").length > 0,
+    "no results to begin with",
+  );
+
+  // Unticking two goals in the finder leaves only the third in the results.
+  for (const label of ["Bulking", "Depends on portion size"])
+    await click(
+      finderGoals
+        .find((el) => el.textContent.includes(label))
+        .querySelector("input"),
+    );
+  const badges = [...document.querySelectorAll("#fridge-finder .goal-badge")];
+  assert.ok(badges.length > 0, "goal filter emptied the results");
+  assert.ok(
+    badges.every((b) => /cutting/i.test(b.textContent)),
+    "a non-cutting recipe survived the filter",
+  );
+
+  // The picker's copy of the filter reflects the same state.
+  assert.deepEqual(
+    [...document.querySelectorAll(".picker-card .goal-option input")].map(
+      (i) => i.checked,
+    ),
+    [true, false, false],
+    "the two filters disagree",
+  );
+  await unmount();
+});
