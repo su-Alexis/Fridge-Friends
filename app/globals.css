@@ -1155,6 +1155,65 @@ button:disabled {
   margin: 0;
   font-size: 0.875rem;
 }
+/* Status messages. These used to be screen-reader only, so a sighted user got
+   no confirmation at all when a recipe saved. */
+.toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: max(18px, env(safe-area-inset-bottom));
+  z-index: 60;
+  width: min(560px, calc(100vw - 32px));
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 14px 14px 18px;
+  background: var(--ink);
+  color: var(--cream);
+  box-shadow: 0 10px 30px rgba(36, 52, 44, 0.28);
+  pointer-events: auto;
+}
+.toast[data-important="true"] {
+  background: #fff0ca;
+  color: #563b00;
+  border: 1px solid #e4c97a;
+}
+.toast p {
+  margin: 0;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  flex: 1;
+}
+.toast-close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  opacity: 0.75;
+}
+.toast-close:hover {
+  opacity: 1;
+}
+.toast-close:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+@media (max-width: 520px) {
+  .toast {
+    padding: 12px 12px 12px 14px;
+  }
+  .toast p {
+    font-size: 0.8125rem;
+  }
+}
 /* Recipe search: 309 entries is too many to scroll. */
 .recipe-search {
   position: relative;

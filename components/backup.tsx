@@ -22,7 +22,7 @@ import {
 export function BackupDialog({
   onStatus,
 }: {
-  onStatus: (message: string) => void;
+  onStatus: (message: string, important?: boolean) => void;
 }) {
   const { state, update } = usePlanner();
   const [open, setOpen] = useState(false);
@@ -107,8 +107,11 @@ export function BackupDialog({
         <DialogHeader>
           <DialogTitle>Backup and restore</DialogTitle>
           <DialogDescription>
-            Recipes and lists are saved only in this browser. Export a file
-            before switching devices, browsers, or web addresses.
+            Everything you add is saved in this browser, on this device only.
+            It survives refreshing and reopening your browser — but clearing
+            your browsing data erases it, and it does not follow you to another
+            device, browser or web address. A backup is a file you keep, so you
+            can put it all back.
           </DialogDescription>
         </DialogHeader>
         {error && (
@@ -119,7 +122,11 @@ export function BackupDialog({
         <div className="backup-panel">
           <section>
             <strong>Export</strong>
-            <p className="field-help">Saved now: {describeBackup(state)}.</p>
+            <p className="field-help">
+              Downloads a file holding everything you have added: currently{" "}
+              {describeBackup(state)}. Keep it somewhere safe, such as iCloud,
+              Dropbox or an email to yourself.
+            </p>
             <button className="add-list" onClick={exportBackup}>
               <Download size={16} />
               Download backup
@@ -128,8 +135,9 @@ export function BackupDialog({
           <section>
             <strong>Restore</strong>
             <p className="field-help">
-              Choose a backup file. This replaces everything saved in this
-              browser, so export first if you want to keep it.
+              Puts a backup file back. Use this on a new device or browser, or
+              after clearing your browsing data. It replaces everything
+              currently saved here, so export first if you want to keep that.
             </p>
             <label className="add-list file-label">
               <Upload size={16} />

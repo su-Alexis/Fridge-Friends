@@ -445,3 +445,62 @@ test("macros show for the selected recipe and scale with the batch count", async
   assert.equal(Number(two[0].value.replace(/,/g, "")), calories * 2);
   await unmount();
 });
+
+test("saving a recipe shows a visible notice about backing it up", async () => {
+  window.localStorage.clear();
+  await mount();
+  await click(button("Add recipe"));
+  const field = (name) => document.querySelector(`[name="${name}"]`);
+  await edit(field("name"), "Toast test bowl");
+  await edit(field("style"), "Bowl");
+  await edit(field("perishables"), sharedPerishable);
+  await edit(field("ingredients"), "1 cup rice");
+  await edit(field("instructions"), "Cook it.");
+  await act(async () =>
+    document
+      .querySelector(".recipe-form")
+      .dispatchEvent(new Event("submit", { bubbles: true, cancelable: true })),
+  );
+
+  const toast = document.querySelector(".toast");
+  assert.ok(toast, "no visible notice after saving");
+  const text = toast.textContent;
+  assert.match(text, /Toast test bowl/);
+  assert.match(text, /refresh|reopen/i, "does not say the recipe persists");
+  assert.match(text, /clearing your browsing data/i, "does not warn about data loss");
+  assert.match(text, /Backup/i, "does not point at Backup & restore");
+  // Data-loss warnings must not vanish on their own.
+  assert.equal(toast.getAttribute("data-important"), "true");
+  assert.equal(
+    document.querySelector(".toast-region").getAttribute("role"),
+    "status",
+    "notice is not announced to screen readers",
+  );
+
+  await click(document.querySelector(".toast-close"));
+  assert.equal(document.querySelector(".toast"), null, "notice would not dismiss");
+  await unmount();
+});
+
+test("typing in the search filters the picker on each keystroke", async () => {
+  window.localStorage.clear();
+  await mount();
+  const input = document.querySelector(".recipe-search input");
+  assert.ok(input, "no search field");
+  assert.match(input.placeholder, /chicken/i, "placeholder gives no example");
+  const shown = () => document.querySelector(".search-count").textContent;
+  const all = shown();
+
+  // Character by character, the count narrows as it goes.
+  let previous = Infinity;
+  for (const partial of ["b", "bu", "bur", "burr"]) {
+    await edit(input, partial);
+    const count = Number(shown().match(/\d+/)[0]);
+    assert.ok(count <= previous, `"${partial}" widened the list`);
+    previous = count;
+  }
+  assert.notEqual(shown(), all, "search did not filter anything");
+  await edit(input, "");
+  assert.equal(shown(), all, "clearing the search did not restore the list");
+  await unmount();
+});

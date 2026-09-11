@@ -4,6 +4,7 @@ import recipeImage from "./assets/recipe-spread.webp";
 import { useState } from "react";
 import { RecipeEditor, DeleteRecipe } from "@/components/recipe-editor";
 import { BackupDialog } from "@/components/backup";
+import { Toast, type Notice } from "@/components/toast";
 import {
   ALL_GOALS,
   GoalBadge,
@@ -36,7 +37,10 @@ import {
 export default function Home() {
   const { state, recipes, error, update } = usePlanner();
   const { selectedId, servings, mealPlan } = state;
-  const [status, setStatus] = useState("");
+  const [notice, setNotice] = useState<Notice>(null);
+  // `important` messages stay on screen until dismissed.
+  const setStatus = (text: string, important = false) =>
+    setNotice(text ? { text, important } : null);
   const [goals, setGoals] = useState<GoalFilter>(ALL_GOALS);
   const [query, setQuery] = useState("");
   const setSelectedId = (id: string) =>
@@ -107,9 +111,7 @@ export default function Home() {
           {error}
         </p>
       )}
-      <p className="sr-only" role="status">
-        {status}
-      </p>
+      <Toast notice={notice} onDismiss={() => setNotice(null)} />
       <section className="workspace">
         <div className="intro">
           <p className="eyebrow">
@@ -143,7 +145,7 @@ export default function Home() {
               type="search"
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder={`Search ${recipes.length} recipes`}
+              placeholder="Search recipes — try chicken, burrito or pancakes"
               aria-label="Search recipes by name or style"
               aria-describedby="recipe-search-count"
               autoComplete="off"

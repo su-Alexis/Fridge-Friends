@@ -292,7 +292,7 @@ export function RecipeEditor({
   onSaved,
 }: {
   recipe?: Recipe;
-  onSaved: (message: string) => void;
+  onSaved: (message: string, important?: boolean) => void;
 }) {
   const [open, setOpen] = useState(false);
   const { recipes, update } = usePlanner();
@@ -334,7 +334,10 @@ export function RecipeEditor({
                 servings: current.mealPlan[saved.id] ?? 1,
               }));
               setOpen(false);
-              onSaved(`${saved.name} saved.`);
+              onSaved(
+                `${saved.name} saved. It stays on this device when you refresh or reopen your browser, but clearing your browsing data will erase it. Use Backup & restore to keep a copy.`,
+                true,
+              );
             }}
           />
         )}
@@ -348,7 +351,7 @@ export function DeleteRecipe({
   onDeleted,
 }: {
   recipe: Recipe;
-  onDeleted: (message: string) => void;
+  onDeleted: (message: string, important?: boolean) => void;
 }) {
   const { update } = usePlanner();
   return (
