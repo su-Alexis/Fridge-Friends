@@ -397,6 +397,9 @@ export default function Home() {
       <FridgeFinder
         recipes={recipes}
         pantry={pantry}
+        goals={goals}
+        goalCounts={goalCounts}
+        onGoals={applyGoals}
         // Until the search or a click sets it, the fridge follows the chosen
         // recipe, so the "use up the rest" flow still works on first load.
         chosen={fridge ?? selected.perishables}

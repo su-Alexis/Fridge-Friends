@@ -1429,6 +1429,40 @@ button:disabled {
 .results-section .finder-actions .clear-list:hover {
   background: rgba(248, 244, 235, 0.12);
 }
+/* Goal chips lead the finder's filters, above the ingredients. On the dark
+   section they need the light treatment the picker card's version does not. */
+.finder-goals {
+  max-width: 1260px;
+  margin: 0 auto 16px;
+  padding: 0 4px;
+}
+.finder-goals .mini-label {
+  color: #c9d3c4;
+}
+.finder-goals .goal-option {
+  border-color: #6d7c6a;
+  background: transparent;
+  color: #e7ece3;
+}
+.finder-goals .goal-option:hover {
+  border-color: #b9c6b3;
+}
+.finder-goals .goal-option .goal-tick {
+  border-color: #8d9b89;
+}
+.finder-goals .goal-option:has(input:checked) {
+  background: var(--sage);
+  border-color: var(--sage);
+  color: #2c3a29;
+}
+.finder-goals .goal-option:has(input:checked) .goal-tick {
+  background: #2c3a29;
+  border-color: #2c3a29;
+  color: var(--sage);
+}
+.finder-goals .goal-option:has(input:focus-visible) {
+  outline: 3px solid #f0b8a8;
+}
 .fridge-picker {
   max-width: 1260px;
   margin: 0 auto 30px;

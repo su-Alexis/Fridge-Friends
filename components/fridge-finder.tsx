@@ -3,7 +3,12 @@
 import { useMemo } from "react";
 import { ArrowRight, BookOpen, Check, Plus, RotateCcw } from "lucide-react";
 import type { Recipe } from "@/lib/recipe-schema";
-import { GoalBadge } from "@/components/goal-filter";
+import {
+  GoalBadge,
+  GoalFilterBar,
+  type Goal,
+  type GoalFilter,
+} from "@/components/goal-filter";
 import { MacroSummary } from "@/components/macros";
 import { normalizeIngredient as normalize } from "@/lib/matching";
 import type { PantryItem } from "@/lib/pantry";
@@ -13,6 +18,9 @@ export function FridgeFinder({
   pantry,
   chosen,
   onChosen,
+  goals,
+  goalCounts,
+  onGoals,
   onSelect,
   onAdd,
 }: {
@@ -20,6 +28,9 @@ export function FridgeFinder({
   pantry: PantryItem[];
   chosen: string[];
   onChosen: (next: string[]) => void;
+  goals: GoalFilter;
+  goalCounts: Record<Goal, number>;
+  onGoals: (next: GoalFilter) => void;
   onSelect: (id: string) => void;
   onAdd: (recipe: Recipe) => void;
 }) {
@@ -53,6 +64,7 @@ export function FridgeFinder({
     if (!picked.size) return [];
     const distinctive = [...picked].some((i) => !staples.has(i));
     return recipes
+      .filter((recipe) => goals[recipe.goal])
       .map((recipe) => {
         const uses = recipe.perishables.filter((i) => picked.has(normalize(i)));
         const missing = recipe.perishables.filter(
@@ -82,7 +94,7 @@ export function FridgeFinder({
           a.recipe.name.localeCompare(b.recipe.name),
       )
       .slice(0, 40);
-  }, [recipes, picked, weights, staples]);
+  }, [recipes, picked, weights, staples, goals]);
 
   const toggle = (label: string) =>
     onChosen(
@@ -116,6 +128,9 @@ export function FridgeFinder({
         </div>
       </div>
 
+      <div className="finder-goals">
+        <GoalFilterBar value={goals} counts={goalCounts} onChange={onGoals} />
+      </div>
       <div className="fridge-picker">
         {pantry.map(({ label, uses }) => {
           const on = picked.has(normalize(label));
@@ -136,6 +151,12 @@ export function FridgeFinder({
         })}
       </div>
 
+      {picked.size > 0 && results.length === 0 && (
+        <p className="empty-matches">
+          Nothing matches those goals with the ingredients you ticked. Add a
+          goal above, or choose another ingredient.
+        </p>
+      )}
       {picked.size === 0 && (
         <p className="empty-matches">
           Choose an ingredient above to see what you can make with it.
