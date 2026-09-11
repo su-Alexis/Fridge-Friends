@@ -1153,6 +1153,60 @@ button:disabled {
   margin: 0;
   font-size: 0.875rem;
 }
+/* Recipe search: 309 entries is too many to scroll. */
+.recipe-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 8px;
+  padding: 0 12px;
+  border: 1px solid #aeb7ad;
+  background: white;
+  color: #566358;
+}
+.recipe-search:focus-within {
+  outline: 3px solid #a1402d;
+  outline-offset: 2px;
+}
+.recipe-search input {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+}
+.recipe-search input:focus {
+  outline: none;
+}
+.recipe-search input::-webkit-search-cancel-button {
+  display: none;
+}
+.recipe-search-clear {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  min-height: 32px;
+  border: 0;
+  background: transparent;
+  color: #566358;
+  cursor: pointer;
+}
+.recipe-search-clear:hover {
+  color: var(--ink);
+}
+.search-count {
+  margin: 0 0 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #7b827c;
+}
 /* Macros: a KPI row of stat tiles, not a chart. Values are sans semibold with
    the font's default proportional figures - tabular-nums is for columns that
    must align vertically, and makes a standalone number look loose. */

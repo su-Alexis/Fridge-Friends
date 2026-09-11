@@ -2,6 +2,11 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import test from "node:test";
 import { catalogSchema, recipeSchema } from "../lib/recipe-schema.ts";
+
+const median = (values) => {
+  const sorted = [...values].sort((a, b) => a - b);
+  return sorted[Math.floor(sorted.length / 2)];
+};
 const catalog = catalogSchema.parse(
   JSON.parse(
     await readFile(new URL("../data/recipes.json", import.meta.url), "utf8"),
@@ -163,6 +168,19 @@ test("every catalog recipe carries the macros the source states", () => {
   const complete = withMacros.filter(
     (r) => ["calories", "protein", "carbs", "fat"].every((k) => r.macros[k] !== null),
   );
-  // Five source entries genuinely state fewer than four figures.
-  assert.equal(catalog.recipes.length - complete.length, 5);
+  // Three source entries state only calories and protein. Nothing is inferred
+  // to fill the gaps, so this stays at three unless the source itself changes.
+  assert.equal(catalog.recipes.length - complete.length, 3);
+
+  // Guard the parser bug that read a nutrient's value from the NEXT line:
+  // every stated calorie figure should be a plausible meal, not a gram count.
+  const calories = catalog.recipes
+    .map((r) => r.macros?.calories)
+    .filter((c) => typeof c === "number");
+  assert.equal(calories.length, catalog.recipes.length - 0);
+  assert.ok(
+    Math.min(...calories) >= 50,
+    `implausibly low calories: ${Math.min(...calories)}`,
+  );
+  assert.ok(median(calories) > 250, `median calories too low: ${median(calories)}`);
 });

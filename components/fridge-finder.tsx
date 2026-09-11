@@ -40,25 +40,63 @@ export function FridgeFinder({
 
   const picked = useMemo(() => new Set(chosen.map(normalize)), [chosen]);
 
+  // Sharing "Cheese" says almost nothing - most recipes contain it. Sharing
+  // "Seaweed" is a real signal. Weight each ingredient by how rare it is, so
+  // results are ranked by meaningful overlap rather than by staples.
+  const weights = useMemo(() => {
+    const total = recipes.length || 1;
+    return new Map(
+      pantry.map(({ label, uses }) => [
+        normalize(label),
+        Math.log(total / uses) || 0.01,
+      ]),
+    );
+  }, [pantry, recipes.length]);
+
+  // An ingredient in more than a sixth of the catalog is a staple: sharing it
+  // says little. At a quarter only Greek yogurt qualified, so the rule never
+  // engaged.
+  const staples = useMemo(() => {
+    const cutoff = (recipes.length || 1) * 0.15;
+    return new Set(
+      pantry.filter((p) => p.uses > cutoff).map((p) => normalize(p.label)),
+    );
+  }, [pantry, recipes.length]);
+
   const results = useMemo(() => {
     if (!picked.size) return [];
+    const distinctive = [...picked].some((i) => !staples.has(i));
     return recipes
       .map((recipe) => {
         const uses = recipe.perishables.filter((i) => picked.has(normalize(i)));
         const missing = recipe.perishables.filter(
           (i) => !picked.has(normalize(i)),
         );
-        return { recipe, uses, missing };
+        const score = uses.reduce(
+          (total, i) => total + (weights.get(normalize(i)) ?? 0),
+          0,
+        );
+        const notable = uses.filter((i) => !staples.has(normalize(i))).length;
+        return { recipe, uses, missing, score, notable };
       })
-      .filter((match) => match.uses.length > 0)
+      // Staples alone are not a match. Require something distinctive, or a
+      // large overlap. If the fridge holds only staples, fall back to overlap
+      // size so the list is never empty for a legitimate selection.
+      .filter((m) =>
+        m.uses.length === 0
+          ? false
+          : distinctive
+            ? m.notable > 0 || m.uses.length >= 4
+            : m.uses.length >= Math.min(2, picked.size),
+      )
       .sort(
         (a, b) =>
-          b.uses.length - a.uses.length ||
+          b.score - a.score ||
           a.missing.length - b.missing.length ||
           a.recipe.name.localeCompare(b.recipe.name),
       )
-      .slice(0, 60);
-  }, [recipes, picked]);
+      .slice(0, 40);
+  }, [recipes, picked, weights, staples]);
 
   const toggle = (label: string) =>
     setChosen((current) =>
@@ -75,7 +113,7 @@ export function FridgeFinder({
           <h2>
             {picked.size === 0
               ? "What have you got?"
-              : `${results.length}${results.length === 60 ? "+" : ""} ${
+              : `${results.length}${results.length === 40 ? "+" : ""} ${
                   results.length === 1 ? "recipe uses" : "recipes use"
                 } what you have`}
           </h2>

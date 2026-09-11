@@ -15,7 +15,14 @@ import { RecipeCalculator } from "@/components/recipe-calculator";
 import { GroceryList } from "@/components/grocery-list";
 import { FridgeFinder } from "@/components/fridge-finder";
 import { usePlanner } from "@/hooks/use-planner";
-import { Check, Refrigerator, ShoppingCart, Sparkles } from "lucide-react";
+import {
+  Check,
+  Refrigerator,
+  Search,
+  ShoppingCart,
+  Sparkles,
+  X,
+} from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -31,6 +38,7 @@ export default function Home() {
   const { selectedId, servings, mealPlan } = state;
   const [status, setStatus] = useState("");
   const [goals, setGoals] = useState<GoalFilter>(ALL_GOALS);
+  const [query, setQuery] = useState("");
   const setSelectedId = (id: string) =>
     update((current) => ({
       ...current,
@@ -49,10 +57,25 @@ export default function Home() {
     (totals, recipe) => ({ ...totals, [recipe.goal]: totals[recipe.goal] + 1 }),
     { Cutting: 0, Bulking: 0, Either: 0 } as Record<Goal, number>,
   );
-  const visible = recipes.filter((recipe) => goals[recipe.goal]);
+  // 309 recipes is too many to scroll, so the search narrows the dropdown by
+  // name, style and goal before it opens.
+  const terms = query.toLowerCase().split(/\s+/).filter(Boolean);
+  const visible = recipes.filter(
+    (recipe) =>
+      goals[recipe.goal] &&
+      terms.every((term) =>
+        `${recipe.name} ${recipe.style} ${recipe.goal}`
+          .toLowerCase()
+          .includes(term),
+      ),
+  );
   // Changing the filter can hide whatever is selected. Move the selection to
   // the first recipe still showing, rather than leaving a hidden recipe on
   // screen as though the filter had not applied to it.
+  const applyQuery = (next: string) => {
+    setQuery(next);
+  };
+  void applyQuery;
   const applyGoals = (next: GoalFilter) => {
     setGoals(next);
     const stillShowing = recipes.filter((recipe) => next[recipe.goal]);
@@ -114,13 +137,42 @@ export default function Home() {
         <div className="picker-card">
           <label htmlFor="recipe-picker">Start with a recipe</label>
           <GoalFilterBar value={goals} counts={goalCounts} onChange={applyGoals} />
+          <div className="recipe-search">
+            <Search size={15} aria-hidden="true" />
+            <input
+              type="search"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder={`Search ${recipes.length} recipes`}
+              aria-label="Search recipes by name or style"
+              aria-describedby="recipe-search-count"
+              autoComplete="off"
+            />
+            {query && (
+              <button
+                type="button"
+                className="recipe-search-clear"
+                aria-label="Clear search"
+                onClick={() => setQuery("")}
+              >
+                <X size={15} />
+              </button>
+            )}
+          </div>
+          <p id="recipe-search-count" className="search-count" role="status">
+            {query
+              ? `${visible.length} of ${recipes.length} recipes match`
+              : `${visible.length} recipes shown`}
+          </p>
           <Select value={selected.id} onValueChange={setSelectedId}>
             <SelectTrigger
               id="recipe-picker"
               className="recipe-select"
               aria-label="Choose a recipe"
             >
-              <SelectValue />
+              {/* Explicit children: when the search hides the selected recipe
+                  from the list, SelectValue finds no item and renders blank. */}
+              <SelectValue>{selected.name}</SelectValue>
             </SelectTrigger>
             <SelectContent
               position="popper"
@@ -150,8 +202,9 @@ export default function Home() {
           </Select>
           {visible.length === 0 && (
             <p className="empty-picker" role="status">
-              No recipes match those goals. Tick a goal above to see recipes
-              again.
+              {query
+                ? `No recipes match “${query}”. Clear the search or try another word.`
+                : "No recipes match those goals. Tick a goal above to see recipes again."}
             </p>
           )}
           <div className="selected-recipe">
