@@ -1,0 +1,18 @@
+node_modules/
+dist/
+coverage/
+*.tsbuildinfo
+.DS_Store
+*.log
+.env*
+*.pem
+*.key
+*.p12
+*.pfx
+.npm-cache/
+# Legacy hosting state must never be published if restored from a backup.
+.openai/
+.sites-runtime/
+.wrangler/
+.next/
+www/
