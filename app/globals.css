@@ -1308,6 +1308,14 @@ button:disabled {
 .search-results li[data-active="true"] {
   background: var(--sage);
 }
+/* Ingredient rows act on the finder below, not the picker, so they read as a
+   distinct action rather than another recipe. */
+.search-results li[data-kind="ingredient"] {
+  border-bottom: 1px solid var(--line);
+}
+.search-results li[data-kind="ingredient"] .search-result-name {
+  color: #a1402d;
+}
 .search-result-name {
   font-weight: 600;
   color: var(--ink);

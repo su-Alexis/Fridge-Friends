@@ -1,7 +1,7 @@
 "use client";
 
 import recipeImage from "./assets/recipe-spread.webp";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { RecipeEditor, DeleteRecipe } from "@/components/recipe-editor";
 import { BackupDialog } from "@/components/backup";
 import { Toast, type Notice } from "@/components/toast";
@@ -17,6 +17,7 @@ import { GroceryList } from "@/components/grocery-list";
 import { FridgeFinder } from "@/components/fridge-finder";
 import { usePlanner } from "@/hooks/use-planner";
 import { searchRank } from "@/lib/search";
+import { catalogPantry, pantryMatches } from "@/lib/pantry";
 import {
   Check,
   Refrigerator,
@@ -46,6 +47,8 @@ export default function Home() {
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
   const [openResults, setOpenResults] = useState(false);
+  const pantry = useMemo(() => catalogPantry(recipes), [recipes]);
+  const [fridge, setFridge] = useState<string[] | null>(null);
   const setSelectedId = (id: string) =>
     update((current) => ({
       ...current,
@@ -84,12 +87,44 @@ export default function Home() {
   };
   void applyQuery;
   const matches = visible.slice(0, 20);
-  const showResults = openResults && query.trim() !== "" && matches.length > 0;
-  const choose = (id: string) => {
-    setSelectedId(id);
+  // A term that names a refrigerated ingredient can drive the finder below.
+  const ingredientHits = pantryMatches(pantry, query);
+  type Option =
+    | { kind: "ingredient"; label: string; uses: number }
+    | { kind: "recipe"; recipe: (typeof recipes)[number] };
+  const options: Option[] = [
+    ...ingredientHits.map((item) => ({
+      kind: "ingredient" as const,
+      label: item.label,
+      uses: item.uses,
+    })),
+    ...matches.map((recipe) => ({ kind: "recipe" as const, recipe })),
+  ];
+  const showResults =
+    openResults && query.trim() !== "" && options.length > 0;
+  const closeSearch = () => {
     setQuery("");
     setOpenResults(false);
   };
+  const choose = (id: string) => {
+    setSelectedId(id);
+    closeSearch();
+  };
+  // Replace the fridge with just this ingredient, then show the results.
+  const filterByIngredient = (label: string) => {
+    setFridge([label]);
+    closeSearch();
+    document.getElementById("fridge-finder")?.scrollIntoView({
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+      block: "start",
+    });
+  };
+  const pick = (option: Option) =>
+    option.kind === "ingredient"
+      ? filterByIngredient(option.label)
+      : choose(option.recipe.id);
   const applyGoals = (next: GoalFilter) => {
     setGoals(next);
     const stillShowing = recipes.filter((recipe) => next[recipe.goal]);
@@ -162,17 +197,17 @@ export default function Home() {
               onFocus={() => query && setOpenResults(true)}
               onBlur={() => setOpenResults(false)}
               onKeyDown={(event) => {
-                if (!matches.length) return;
+                if (!options.length) return;
                 if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                   event.preventDefault();
                   setOpenResults(true);
                   setActive((current) => {
                     const step = event.key === "ArrowDown" ? 1 : -1;
-                    return (current + step + matches.length) % matches.length;
+                    return (current + step + options.length) % options.length;
                   });
                 } else if (event.key === "Enter" && openResults) {
                   event.preventDefault();
-                  choose(matches[active].id);
+                  pick(options[active]);
                 } else if (event.key === "Escape") {
                   event.preventDefault();
                   // First Escape closes the list, a second clears the search.
@@ -188,7 +223,7 @@ export default function Home() {
               aria-expanded={showResults}
               aria-controls="recipe-search-results"
               aria-activedescendant={
-                showResults ? `search-option-${matches[active]?.id}` : undefined
+                showResults ? `search-option-${active}` : undefined
               }
             />
             {query && (
@@ -211,22 +246,44 @@ export default function Home() {
                 role="listbox"
                 aria-label="Matching recipes"
               >
-                {matches.map((recipe, index) => (
+                {options.map((option, index) => (
                   <li
-                    key={recipe.id}
-                    id={`search-option-${recipe.id}`}
+                    key={
+                      option.kind === "ingredient"
+                        ? `ingredient-${option.label}`
+                        : option.recipe.id
+                    }
+                    id={`search-option-${index}`}
                     role="option"
                     aria-selected={index === active}
                     data-active={index === active}
+                    data-kind={option.kind}
                     // mousedown, not click: blur would close the list first.
                     onMouseDown={(event) => {
                       event.preventDefault();
-                      choose(recipe.id);
+                      pick(option);
                     }}
                     onMouseEnter={() => setActive(index)}
                   >
-                    <span className="search-result-name">{recipe.name}</span>
-                    <span className="search-result-style">{recipe.style}</span>
+                    {option.kind === "ingredient" ? (
+                      <>
+                        <span className="search-result-name">
+                          Show only recipes using {option.label}
+                        </span>
+                        <span className="search-result-style">
+                          {option.uses} recipes
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <span className="search-result-name">
+                          {option.recipe.name}
+                        </span>
+                        <span className="search-result-style">
+                          {option.recipe.style}
+                        </span>
+                      </>
+                    )}
                   </li>
                 ))}
                 {visible.length > matches.length && (
@@ -339,7 +396,11 @@ export default function Home() {
       <GroceryList onStatus={setStatus} />
       <FridgeFinder
         recipes={recipes}
-        selected={selected}
+        pantry={pantry}
+        // Until the search or a click sets it, the fridge follows the chosen
+        // recipe, so the "use up the rest" flow still works on first load.
+        chosen={fridge ?? selected.perishables}
+        onChosen={setFridge}
         onSelect={setSelectedId}
         onAdd={(recipe) => {
           setMealPlan((current) => ({

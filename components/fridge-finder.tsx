@@ -1,42 +1,28 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { ArrowRight, BookOpen, Check, Plus, RotateCcw } from "lucide-react";
 import type { Recipe } from "@/lib/recipe-schema";
 import { GoalBadge } from "@/components/goal-filter";
 import { MacroSummary } from "@/components/macros";
 import { normalizeIngredient as normalize } from "@/lib/matching";
+import type { PantryItem } from "@/lib/pantry";
 
 export function FridgeFinder({
   recipes,
-  selected,
+  pantry,
+  chosen,
+  onChosen,
   onSelect,
   onAdd,
 }: {
   recipes: Recipe[];
-  selected: Recipe;
+  pantry: PantryItem[];
+  chosen: string[];
+  onChosen: (next: string[]) => void;
   onSelect: (id: string) => void;
   onAdd: (recipe: Recipe) => void;
 }) {
-  // Seed from the chosen recipe so the "use up the rest" flow still works, then
-  // let the list be edited freely.
-  const [chosen, setChosen] = useState<string[]>(() => selected.perishables);
-
-  // Every refrigerated ingredient in the catalog, commonest first so the
-  // ingredients most likely to be in a fridge are easiest to reach.
-  const pantry = useMemo(() => {
-    const counts = new Map<string, { label: string; uses: number }>();
-    for (const recipe of recipes)
-      for (const item of recipe.perishables) {
-        const key = normalize(item);
-        const seen = counts.get(key);
-        if (seen) seen.uses += 1;
-        else counts.set(key, { label: item, uses: 1 });
-      }
-    return [...counts.values()].sort(
-      (a, b) => b.uses - a.uses || a.label.localeCompare(b.label),
-    );
-  }, [recipes]);
 
   const picked = useMemo(() => new Set(chosen.map(normalize)), [chosen]);
 
@@ -99,10 +85,10 @@ export function FridgeFinder({
   }, [recipes, picked, weights, staples]);
 
   const toggle = (label: string) =>
-    setChosen((current) =>
-      current.some((i) => normalize(i) === normalize(label))
-        ? current.filter((i) => normalize(i) !== normalize(label))
-        : [...current, label],
+    onChosen(
+      chosen.some((i) => normalize(i) === normalize(label))
+        ? chosen.filter((i) => normalize(i) !== normalize(label))
+        : [...chosen, label],
     );
 
   return (
@@ -123,7 +109,7 @@ export function FridgeFinder({
           </p>
         </div>
         <div className="finder-actions">
-          <button className="clear-list" onClick={() => setChosen([])}>
+          <button className="clear-list" onClick={() => onChosen([])}>
             <RotateCcw size={15} />
             Clear
           </button>

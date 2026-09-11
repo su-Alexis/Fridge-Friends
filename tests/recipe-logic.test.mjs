@@ -21,6 +21,7 @@ const { initialState, validateState, parseSavedState } =
   await vite.ssrLoadModule("/lib/planner-state.ts");
 const { normalizeIngredient } = await vite.ssrLoadModule("/lib/matching.ts");
 const { matchesSearch, searchRank } = await vite.ssrLoadModule("/lib/search.ts");
+const { catalogPantry, pantryMatches } = await vite.ssrLoadModule("/lib/pantry.ts");
 
 test("every catalog recipe has unique identity, ingredients and instructions", () => {
   assert.equal(new Set(recipes.map((r) => r.id)).size, recipes.length);
@@ -243,4 +244,36 @@ test("a literal match outranks a synonym one, and both still appear", () => {
   const shown = ranked.slice(0, 20);
   assert.ok(shown.some((e) => /milk/i.test(e.r.name)), "no milk titles shown");
   assert.ok(shown.some((e) => !/milk/i.test(e.r.name)), "no shakes shown");
+});
+
+test("a search term finds the ingredient it names, whatever the casing", () => {
+  const pantry = catalogPantry(recipes);
+  for (const spelling of ["chicken", "Chicken", "CHICKEN", "  cHiCkEn  "]) {
+    const [best] = pantryMatches(pantry, spelling);
+    assert.ok(best, `no ingredient found for ${JSON.stringify(spelling)}`);
+    assert.match(best.label, /chicken/i);
+  }
+  // An exact ingredient name outranks one that merely contains the word.
+  assert.equal(pantryMatches(pantry, "cheese")[0].label, "Cheese");
+  // Very short fragments do not offer an ingredient; they are still typing.
+  assert.deepEqual(pantryMatches(pantry, "ch"), []);
+  // A word that names no ingredient offers nothing.
+  assert.deepEqual(pantryMatches(pantry, "burrito"), []);
+});
+
+test("filtering by one ingredient keeps only recipes that use it", () => {
+  const pantry = catalogPantry(recipes);
+  const [chicken] = pantryMatches(pantry, "chicken");
+  const using = recipes.filter((r) =>
+    r.perishables.some(
+      (p) => normalizeIngredient(p) === normalizeIngredient(chicken.label),
+    ),
+  );
+  assert.equal(using.length, chicken.uses, "the count shown does not match");
+  assert.ok(using.length > 10, `only ${using.length} recipes use it`);
+  // Nothing without it can appear when it is the only ingredient chosen.
+  assert.ok(
+    using.every((r) => r.perishables.some((p) => /chicken/i.test(p))),
+    "a recipe without chicken slipped in",
+  );
 });
