@@ -85,7 +85,9 @@ button {
   padding: clamp(54px, 8vw, 100px) clamp(20px, 5vw, 78px);
   display: grid;
   grid-template-columns: minmax(280px, 0.82fr) minmax(420px, 1.18fr);
-  align-items: center;
+  /* Top-aligned, not centred: the picker column is now several times taller
+     than the intro, and centring pushed the headline below the fold. */
+  align-items: start;
   gap: clamp(44px, 8vw, 130px);
   position: relative;
   overflow: hidden;
