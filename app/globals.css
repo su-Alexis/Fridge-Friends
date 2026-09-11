@@ -872,12 +872,21 @@ select,
 [role="combobox"] {
   touch-action: manipulation;
 }
+/* Buttons and links only match :focus-visible when reached by keyboard, so the
+   strong rust ring is right for them. */
 button:focus-visible,
-input:focus-visible,
 a:focus-visible,
 [role="combobox"]:focus-visible {
   outline: 3px solid #a1402d !important;
   outline-offset: 3px;
+}
+/* A text field always matches :focus-visible, even from a mouse click, so the
+   rust ring fired on every click and read as an error. Checkboxes are excluded
+   because their focus is drawn on the surrounding chip instead. */
+input:not([type="checkbox"]):not([type="radio"]):focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--ink) !important;
+  outline-offset: 2px;
 }
 button:disabled {
   cursor: default;
@@ -1246,8 +1255,15 @@ button:disabled {
   font-size: 1rem;
   color: var(--ink);
 }
-.recipe-search input:focus {
-  outline: none;
+/* The global input:focus-visible rule carries !important and a text field
+   always matches :focus-visible, so the rust ring drew inside this box on every
+   keystroke. The wrapper's ink ring is the focus indicator here. */
+/* Specificity must beat the global text-field rule above, or the input draws a
+   second ring inside the wrapper's. The wrapper is the focus indicator here so
+   that the search icon and clear button sit inside it. */
+.recipe-search input:focus,
+.recipe-search input:not([type="checkbox"]):not([type="radio"]):focus-visible {
+  outline: none !important;
 }
 .recipe-search input::-webkit-search-cancel-button {
   display: none;
